@@ -4,12 +4,13 @@ tm.physics.AddTexture("blueprints/cameraTracker.png", "rotationStructure")
 
 --#region IDEAS / TODO
 --[[
-    - replace 'InitRotationStructure' with 'spawnRotationStructure'
+
 
     - add a function to spawn the cursor Game object
 
     -
     ]]
+--#endregion
 
 function onPlayerJoined(player)
     tm.os.Log("Player joined: " .. player.playerId)
@@ -58,6 +59,7 @@ function onPlayerJoined(player)
 
     -- Initialize player input
     Init_playerInput(playerId)
+    tm.os.Log("")
 end
 
 tm.players.OnPlayerJoined.add(onPlayerJoined)
@@ -97,7 +99,6 @@ function update()
     end
 end
 
-
 function PlayerUpdate(player)
     local playerId = player.playerId
     local playerData = playerDataTable[playerId]
@@ -123,7 +124,7 @@ function PlayerUpdate(player)
         -- Update camera position and direction based on player rotationStructure
         --CURSOR POSITIONING
 
---[[         local cursorBlock = playerData.rotationStructure.cursorBlock
+        --[[         local cursorBlock = playerData.rotationStructure.cursorBlock
         local cursorRotation = cursorBlock.Forward() + PPointing(playerData.cameraDirection.GetEuler())
         cursorRotation = Normalize(cursorRotation)
         local cursorRaycast = tm.physics.RaycastData(
@@ -142,12 +143,16 @@ function PlayerUpdate(player)
             playerData.cursor.GetTransform().SetPosition(newCursorPosition)
             playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.005, 0.005, 0.005) * hitDistance)
         end ]]
+
+        -- Update camera position based on input
         if playerData.input.forward then
-            playerData.camera.position = playerData.camera.position + PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
+            playerData.camera.position = playerData.camera.position +
+            PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
         end
 
         if playerData.input.backward then
-            playerData.camera.position = playerData.camera.position - PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
+            playerData.camera.position = playerData.camera.position -
+            PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
         end
 
         if playerData.input.left then
@@ -167,10 +172,12 @@ function PlayerUpdate(player)
         end
 
         if playerData.input.up then
-            playerData.camera.position = playerData.camera.position + tm.vector3.Create(0, 1, 0) * playerData.camera.speed
+            playerData.camera.position = playerData.camera.position +
+            tm.vector3.Create(0, 1, 0) * playerData.camera.speed
         end
         if playerData.input.down then
-            playerData.camera.position = playerData.camera.position - tm.vector3.Create(0, 1, 0) * playerData.camera.speed
+            playerData.camera.position = playerData.camera.position -
+            tm.vector3.Create(0, 1, 0) * playerData.camera.speed
         end
 
         tm.players.SetCameraPosition(playerId, playerData.camera.position)
@@ -258,7 +265,7 @@ function TargetRot(PosHun, PosTar)
 end
 
 function Normalize(v)
-    local length = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    local length = v.Magnitude()
     if length == 0 then
         return tm.vector3.Create(0, 0, 0)
     else
@@ -274,10 +281,10 @@ end
 function Init_playerInput(playerId)
     local playerData = playerDataTable[playerId]
 
-    tm.playerUI.AddSubtleMessageForPlayer(playerId, "FreeCam", "Press <sprite index=155> to toggle Free Camera!", 10)
+    tm.playerUI.AddSubtleMessageForPlayer(playerId, "FreeCam", "<sprite index=145> to toggle", 10)
 
     tm.input.RegisterFunctionToKeyDownCallback(playerId,
-        "ToggleFreeCam", "v")
+        "ToggleFreeCam", "left alt")
     tm.input.RegisterFunctionToKeyUpCallback(playerId, "W_up", "w")
     tm.input.RegisterFunctionToKeyDownCallback(playerId, "W_down", "w")
     tm.input.RegisterFunctionToKeyUpCallback(playerId, "S_up", "s")
@@ -308,6 +315,7 @@ function ToggleFreeCam(playerId)
         --deactivate Camera
         tm.players.DeactivateCamera(playerId, 0)
         tm.playerUI.AddSubtleMessageForPlayer(playerId, "FreeCam", "Free Camera Deactivated!", 3)
+        tm.os.Log("")
     else
         tm.os.Log("FreeCam activated for playerId: " .. playerId)
 
@@ -328,6 +336,7 @@ function ToggleFreeCam(playerId)
 
 
         tm.playerUI.AddSubtleMessageForPlayer(playerId, "FreeCam", "Free Camera Activated!", 3)
+        tm.os.Log("")
     end
 end
 
