@@ -56,7 +56,7 @@ function onPlayerJoined(player)
 
     -- Initialize Camera
     tm.players.AddCamera(playerId, tm.vector3.Create(0, 0, 0), tm.vector3.Create(0, 0, 0))
-
+    Init_Cursor(playerId)
     -- Initialize player input
     Init_playerInput(playerId)
     tm.os.Log("")
@@ -124,12 +124,14 @@ function PlayerUpdate(player)
         -- Update camera position and direction based on player rotationStructure
         --CURSOR POSITIONING
 
-        --[[         local cursorBlock = playerData.rotationStructure.cursorBlock
-        local cursorRotation = cursorBlock.Forward() + PPointing(playerData.cameraDirection.GetEuler())
-        cursorRotation = Normalize(cursorRotation)
+        local cursorBlock = playerData.rotationStructure.cursorBlock
+        local cursorBlockRot = tm.quaternion.Create(TargetRot(tm.vector3.Create(0, 0, 0), cursorBlock.Forward()))
+        local combinedRotation = playerData.camera.rotation.Multiply(cursorBlockRot)
+        local cursorDirection = PPointing(combinedRotation.GetEuler())
+        cursorDirection = Normalize(cursorDirection)
         local cursorRaycast = tm.physics.RaycastData(
-            playerData.cameraPosition,
-            cursorRotation,
+            playerData.camera.position,
+            cursorDirection,
             10000,
             true
         )
@@ -142,17 +144,17 @@ function PlayerUpdate(player)
 
             playerData.cursor.GetTransform().SetPosition(newCursorPosition)
             playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.005, 0.005, 0.005) * hitDistance)
-        end ]]
+        end
 
         -- Update camera position based on input
         if playerData.input.forward then
             playerData.camera.position = playerData.camera.position +
-            PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
+                PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
         end
 
         if playerData.input.backward then
             playerData.camera.position = playerData.camera.position -
-            PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
+                PPointing(playerData.camera.rotation.GetEuler()) * playerData.camera.speed
         end
 
         if playerData.input.left then
@@ -173,11 +175,11 @@ function PlayerUpdate(player)
 
         if playerData.input.up then
             playerData.camera.position = playerData.camera.position +
-            tm.vector3.Create(0, 1, 0) * playerData.camera.speed
+                tm.vector3.Create(0, 1, 0) * playerData.camera.speed
         end
         if playerData.input.down then
             playerData.camera.position = playerData.camera.position -
-            tm.vector3.Create(0, 1, 0) * playerData.camera.speed
+                tm.vector3.Create(0, 1, 0) * playerData.camera.speed
         end
 
         tm.players.SetCameraPosition(playerId, playerData.camera.position)
@@ -185,6 +187,12 @@ function PlayerUpdate(player)
 end
 
 function Init_Cursor(playerId)
+    local playerData = playerDataTable[playerId]
+    playerData.cursor = tm.physics.SpawnObject(
+        tm.vector3.Create(0, 0, 0),
+        "PFB_Whale"
+    )
+    playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.05, 0.05, 0.05))
 end
 
 function Spawn_RotationStructure(playerId)
@@ -255,10 +263,10 @@ function TargetRot(PosHun, PosTar)
     local relativeX = PosTar.x - PosHun.x
     local relativeY = -PosTar.y + PosHun.y
     local relativeZ = PosTar.z - PosHun.z
-    local angleradY = math.atan(relativeX, relativeZ)
+    local angleradY = math.atan2(relativeX, relativeZ)
     local relativeangY = math.deg(angleradY)
     local relativehori = math.sqrt(relativeX * relativeX + relativeZ * relativeZ)
-    local angleradX = math.atan(relativeY, relativehori)
+    local angleradX = math.atan2(relativeY, relativehori)
     local relativeangX = math.deg(angleradX)
     local relativetot = tm.vector3.Create(relativeangX, relativeangY, 0)
     return relativetot
