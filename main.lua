@@ -1,5 +1,6 @@
 local playerDataTable = {}
 
+
 local angle = math.rad(270)
 local correctionQuat = tm.quaternion.Create(math.cos(angle / 2), 0, math.sin(angle / 2), 0) -- to correct the rotation of the cursor block
 
@@ -103,6 +104,10 @@ function PlayerUpdate(player)
             tm.players.PlacePlayerInSeat(playerId, playerData.rotationStructure.structureId)
         end
 
+        if playerData.rotationStructure.mouseTrigger.GetPosition().y > -99.5 then
+            onClick(playerId)
+        end
+
         local playerSeat = tm.players.GetPlayerSeatBlock(playerId)
 
         local targetRotation = tm.quaternion.Create(TargetRot(tm.vector3.Create(0, 0, 0), playerSeat.Forward()))
@@ -118,7 +123,6 @@ function PlayerUpdate(player)
         -- Update camera position and direction based on player rotationStructure
         --CURSOR POSITIONING
 
-
         local cursorBlock = playerData.rotationStructure.cursorBlock
 
         local cursorBlockRot = tm.quaternion.Create(TargetRot(tm.vector3.Create(0, 0, 0), cursorBlock.Forward())) -- Get the rotation of the cursor block in quaternion form
@@ -130,7 +134,7 @@ function PlayerUpdate(player)
         local cursorRaycast = tm.physics.RaycastData(
             playerData.camera.position,
             cursorDirection,
-            10000,
+            1000,
             true
         )
         if cursorRaycast.DidHit() then
@@ -144,8 +148,8 @@ function PlayerUpdate(player)
             playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.005, 0.005, 0.005) * hitDistance)
         else
             -- If no hit, just set the cursor to a default position
-            playerData.cursor.GetTransform().SetPosition(playerData.camera.position + cursorDirection * 7)
-            playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.005, 0.005, 0.005) * 7)
+            playerData.cursor.GetTransform().SetPosition(playerData.camera.position + cursorDirection * 500)
+            playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.005, 0.005, 0.005) * 500)
         end
 
         -- Update camera position based on input
@@ -188,6 +192,15 @@ function PlayerUpdate(player)
     end
 end
 
+function onClick(playerId)
+    local playerData = playerDataTable[playerId]
+    tm.os.Log("onClick called")
+    tm.physics.SpawnObject(
+        playerData.cursor.GetTransform().GetPosition(),
+        "PFB_PoisonCloud_Explosion"
+    )
+end
+
 function Init_Cursor(playerId)
     local playerData = playerDataTable[playerId]
     playerData.cursor = tm.physics.SpawnObject(
@@ -218,20 +231,27 @@ function Spawn_RotationStructure(playerId)
 
     --
     -- locate and save the cursor block
+    local mouseTrigger
     local cursorBlock
     local blockList = structure.GetBlocks()
     for i, block in ipairs(blockList) do
         if block.GetName() == "PFB_MixelEye_Sphere [Server]" then
             cursorBlock = block
             tm.os.Log("Cursor block found")
-            break
+        end
+        if block.GetName() == "PFB_Bottle [Server]" then
+            mouseTrigger = block
+            tm.os.Log("Mouse trigger block found")
         end
     end
+
+
 
     playerData.rotationStructure = {
         structure = structure,
         structureId = structureId,
-        cursorBlock = cursorBlock
+        cursorBlock = cursorBlock,
+        mouseTrigger = mouseTrigger
     }
 end
 
@@ -322,6 +342,8 @@ function Init_playerInput(playerId)
     tm.input.RegisterFunctionToKeyDownCallback(playerId, "Space_down", "space")
     tm.input.RegisterFunctionToKeyUpCallback(playerId, "Shift_up", "left shift")
     tm.input.RegisterFunctionToKeyDownCallback(playerId, "Shift_down", "left shift")
+    tm.input.RegisterFunctionToKeyUpCallback(playerId, "Ctrl_up", "left control")
+    tm.input.RegisterFunctionToKeyDownCallback(playerId, "Ctrl_down", "left control")
 
     tm.os.Log("|-> Player input initialized for playerId: " .. playerId)
 end
@@ -458,6 +480,22 @@ function Shift_down(playerId)
 
     if playerData.freeCam then
         playerData.input.down = true
+    end
+end
+
+function Ctrl_up(playerId)
+    local playerData = playerDataTable[playerId]
+
+    if playerData.freeCam then
+        playerData.camera.speed = 1
+    end
+end
+
+function Ctrl_down(playerId)
+    local playerData = playerDataTable[playerId]
+
+    if playerData.freeCam then
+        playerData.camera.speed = 5
     end
 end
 
