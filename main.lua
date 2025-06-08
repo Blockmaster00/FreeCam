@@ -1,3 +1,7 @@
+local cables = tm.os.DoFile("cables")
+
+
+
 local playerDataTable = {}
 
 
@@ -18,7 +22,7 @@ function onPlayerJoined(player)
         camera = {
             position = nil,
             rotation = nil,
-            speed = 1,
+            speed = 2,
         },
 
         rotationStructure = {
@@ -28,6 +32,13 @@ function onPlayerJoined(player)
         },
 
         cursor = nil,
+
+        toolMode = "cable", -- "none", "cable"
+
+        cable = {
+            positions = {},
+            positionIndex = 1, -- Index to track the current position in the cable
+        },
 
         input = {
             forward = false,  --w
@@ -104,8 +115,11 @@ function PlayerUpdate(player)
             tm.players.PlacePlayerInSeat(playerId, playerData.rotationStructure.structureId)
         end
 
-        if playerData.rotationStructure.mouseTrigger.GetPosition().y > -99.5 then
-            onClick(playerId)
+        if playerData.rotationStructure.mouseTrigger.GetPosition().y > -99.5 and playerData.mouseTriggered == false then
+            OnClick(playerId)
+            playerData.mouseTriggered = true
+        elseif playerData.rotationStructure.mouseTrigger.GetPosition().y <= -99.5 then
+            playerData.mouseTriggered = false
         end
 
         local playerSeat = tm.players.GetPlayerSeatBlock(playerId)
@@ -114,7 +128,7 @@ function PlayerUpdate(player)
         local smoothedRotation = tm.quaternion.Slerp(
             playerData.camera.rotation,
             targetRotation,
-            0.1 -- smoothing factor
+            0.3 -- smoothing factor
         )
 
         playerData.camera.rotation = smoothedRotation
@@ -192,13 +206,26 @@ function PlayerUpdate(player)
     end
 end
 
-function onClick(playerId)
+function OnClick(playerId)
     local playerData = playerDataTable[playerId]
     tm.os.Log("onClick called")
-    tm.physics.SpawnObject(
-        playerData.cursor.GetTransform().GetPosition(),
-        "PFB_PoisonCloud_Explosion"
-    )
+    if playerData.toolMode == "cable" then
+        playerData.cable.positions[playerData.cable.positionIndex] = playerData.cursor.GetTransform().GetPosition()
+        tm.os.Log("Cable position updated: " .. playerData.cable.positionIndex)
+        tm.playerUI.AddSubtleMessageForPlayer(playerId, "Cable", "Cable position " .. playerData.cable.positionIndex .. " set!", 3)
+        playerData.cable.positionIndex = 3 - playerData.cable.positionIndex
+        if #playerData.cable.positions == 2 then
+            tm.os.Log("Cable completed, spawning cable")
+            tm.playerUI.AddSubtleMessageForPlayer(playerId, "Cable", "preview generated!", 3)
+            cables.DrawPreview(
+                playerId,
+                playerData.cable.positions[1],
+                playerData.cable.positions[2]
+            )
+        end
+    else
+        tm.os.Log("No tool mode active or tool mode is not 'cable'")
+    end
 end
 
 function Init_Cursor(playerId)
@@ -487,7 +514,7 @@ function Ctrl_up(playerId)
     local playerData = playerDataTable[playerId]
 
     if playerData.freeCam then
-        playerData.camera.speed = 1
+        playerData.camera.speed = 2
     end
 end
 
