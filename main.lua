@@ -1,16 +1,10 @@
 local playerDataTable = {}
 
+local angle = math.rad(270)
+local correctionQuat = tm.quaternion.Create(math.cos(angle / 2), 0, math.sin(angle / 2), 0) -- to correct the rotation of the cursor block
+
 tm.physics.AddTexture("blueprints/cameraTracker.png", "rotationStructure")
 
---#region IDEAS / TODO
---[[
-
-
-    - add a function to spawn the cursor Game object
-
-    -
-    ]]
---#endregion
 
 function onPlayerJoined(player)
     tm.os.Log("Player joined: " .. player.playerId)
@@ -124,10 +118,14 @@ function PlayerUpdate(player)
         -- Update camera position and direction based on player rotationStructure
         --CURSOR POSITIONING
 
+
         local cursorBlock = playerData.rotationStructure.cursorBlock
-        local cursorBlockRot = tm.quaternion.Create(TargetRot(tm.vector3.Create(0, 0, 0), cursorBlock.Forward()))
+
+        local cursorBlockRot = tm.quaternion.Create(TargetRot(tm.vector3.Create(0, 0, 0), cursorBlock.Forward())) -- Get the rotation of the cursor block in quaternion form
+        cursorBlockRot = cursorBlockRot.Multiply(correctionQuat)                                                  -- Apply correction quaternion
+
         local combinedRotation = playerData.camera.rotation.Multiply(cursorBlockRot)
-        local cursorDirection = PPointing(combinedRotation.GetEuler())
+        local cursorDirection = GetForward(combinedRotation)
         cursorDirection = Normalize(cursorDirection)
         local cursorRaycast = tm.physics.RaycastData(
             playerData.camera.position,
@@ -144,6 +142,10 @@ function PlayerUpdate(player)
 
             playerData.cursor.GetTransform().SetPosition(newCursorPosition)
             playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.005, 0.005, 0.005) * hitDistance)
+        else
+            -- If no hit, just set the cursor to a default position
+            playerData.cursor.GetTransform().SetPosition(playerData.camera.position + cursorDirection * 7)
+            playerData.cursor.GetTransform().SetScale(tm.vector3.Create(0.005, 0.005, 0.005) * 7)
         end
 
         -- Update camera position based on input
@@ -279,6 +281,21 @@ function Normalize(v)
     else
         return tm.vector3.Create(v.x / length, v.y / length, v.z / length)
     end
+end
+
+function GetForward(quat)
+    -- Extract the quaternion components
+    local w = quat.w
+    local x = quat.x
+    local y = quat.y
+    local z = quat.z
+
+    -- Calculate the forward vector using the rotation matrix row corresponding to the forward axis.
+    local forwardX = 2 * (x * z + w * y)
+    local forwardY = 2 * (y * z - w * x)
+    local forwardZ = 1 - 2 * (x * x + y * y)
+
+    return tm.vector3.Create(forwardX, forwardY, forwardZ)
 end
 
 --#endregion
